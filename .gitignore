@@ -1,0 +1,6 @@
+lib
+dist
+node_modules
+*.vsix
+.DS_store
+*.tgz
