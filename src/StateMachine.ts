@@ -196,7 +196,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
         }
 
         const newStateName = i < this.states.length ? this.states[i].name : 'end';
-        logger.info(`executed function in state ${this.currentState} x${this.stateCounter + 1} times and spent ${this.timeOnState}ms`);
+        logger.info(`executed function in state ${this.currentState} x${this.stateCounter} times and spent ${this.timeOnState}ms`);
         logger.info(`transition from ${this.states[this.i].name} to ${newStateName}`);
         this.i = i;
         this.timeOnState = 0;
@@ -246,7 +246,6 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
         process.on('uncaughtException', () => this.running = false);
 
         while (this.running && this.context.timeout > 0) {
-            const startingIndex = this.i;
             if (this.i >= this.states.length) {
                 logger.info('state machine has reached the end state');
                 return;
@@ -261,6 +260,9 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
             const started = Date.now();
             try {
                 const provide = await state.execute(this.dependencies);
+                const delta = Date.now() - started;
+                this.timeOnState += delta;
+                this.stateCounter += 1;
 
                 for (const key of Object.keys(provide.updateMap)) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -322,11 +324,6 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
             finally {
                 const delta = Date.now() - started;
                 this.context.timeout -= delta;
-
-                if (startingIndex === this.i) {
-                    this.timeOnState += delta;
-                    this.stateCounter += 1;
-                }
             }
         }
 
