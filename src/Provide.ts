@@ -1,5 +1,5 @@
 import { State } from './State';
-import { DependencyMap, DependencyID, FsmDependency, Dependency } from './Dependency';
+import { DependencyMap, DependencyID, ValueDependency, Dependency } from './Dependency';
 import { CriticalError } from './Error';
 
 export type ProvideFunction<T extends DependencyMap> = (provide: ProvidePublic, dependencies: T) => ProvideComplete | Promise<ProvideComplete>;
@@ -140,7 +140,7 @@ export class Provide implements ProvidePublic, DependencyProvider, ProvideNothin
     }
 
     public dependency<T>(dependency: Dependency<T>, newValue: T): DependencyProvider {
-        const dep = dependency as FsmDependency<T>;
+        const dep = dependency as ValueDependency<T>;
         if (this.has(dep.id)) {
             throw new CriticalError(`Cannot provide dependency with id "${dep.id}" again.`);
         }

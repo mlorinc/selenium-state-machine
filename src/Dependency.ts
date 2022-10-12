@@ -30,7 +30,7 @@ export interface FsmDependencyCloneArguments<T> {
  * element is stale.
  */
 export class StaleDependencyReferenceError<T> extends error.StaleElementReferenceError {
-    constructor(public readonly dependency: FsmDependency<T>) {
+    constructor(public readonly dependency: ValueDependency<T>) {
         super();
     }
 }
@@ -56,7 +56,7 @@ export interface Dependency<T> {
 /**
  * Generic dependency type.
  */
-export class FsmDependency<T> implements Dependency<T> {
+export class ValueDependency<T> implements Dependency<T> {
     protected _value?: T;
     protected _name?: string;
     protected _provider?: State<never>;
@@ -131,7 +131,7 @@ export class FsmDependency<T> implements Dependency<T> {
      * @param provider new provider
      * @returns new Dependency with new values
      */
-    public set(value : T, provider: State<never>): FsmDependency<T> {
+    public set(value : T, provider: State<never>): ValueDependency<T> {
         return this.clone({value, provider});
     }
 
@@ -140,8 +140,8 @@ export class FsmDependency<T> implements Dependency<T> {
      * @param newValues optional new values
      * @returns new Dependency
      */
-    protected clone(newValues: FsmDependencyCloneArguments<T>): FsmDependency<T> {
-        const dep = new FsmDependency<T>({
+    protected clone(newValues: FsmDependencyCloneArguments<T>): ValueDependency<T> {
+        const dep = new ValueDependency<T>({
             name: newValues?.name ?? this._name,
             value: newValues?.value ?? this._value
         });

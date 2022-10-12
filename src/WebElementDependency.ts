@@ -1,13 +1,13 @@
 import { error, promise, WebElement } from 'selenium-webdriver';
 import { State } from './State';
-import { FsmDependency, FsmDependencyArguments, FsmDependencyCloneArguments } from './Dependency';
+import { ValueDependency, FsmDependencyArguments, FsmDependencyCloneArguments } from './Dependency';
 import { CriticalError } from './Error';
 
 /**
  * Specialized dependency type for WebElement objects. This object is responsible for
  * handling stale state.
  */
-export class WebElementDependency<T extends WebElement> extends FsmDependency<T> {
+export class WebElementDependency<T extends WebElement> extends ValueDependency<T> {
     constructor(config?: FsmDependencyArguments<T>) {
         super(config);
         this.invalidate = this.invalidate.bind(this);
