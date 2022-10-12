@@ -1,6 +1,6 @@
 {
   "name": "selenium-state-machine",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Write Selenium tests using state machines",
   "main": "lib/index.js",
   "files": [

@@ -8,7 +8,7 @@ export const logger = createLogger({
             format: 'YYYY-MM-DD HH:mm:ss'
         }),
         format.errors({ stack: true }),
-        format.align(),
+        format.simple(),
         format.colorize()
     ),
     transports: [
