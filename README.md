@@ -13,7 +13,7 @@ solving the problem.
 The library can be downloaded from npm registry using:
 
 ```
-todo
+npm i selenium-state-machine
 ```
 
 And then just import it to your code and follow usage section.
@@ -59,7 +59,6 @@ await sm.start();
 
 ## Roadmap
 
-1. Publish to npm
-2. Add the most used code snippets
-3. Iron out all the bugs
-4. Apply QoL features based on experience
+1. Add the most used code snippets
+2. Iron out all the bugs
+3. Apply QoL features based on experience
