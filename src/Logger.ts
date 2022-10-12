@@ -8,7 +8,7 @@ export const logger = createLogger({
             format: 'YYYY-MM-DD HH:mm:ss'
         }),
         format.errors({ stack: true }),
-        format.simple(),
+        format.align(),
         format.colorize()
     ),
     transports: [
@@ -16,6 +16,6 @@ export const logger = createLogger({
     ]
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.SSM_STDOUT_LOGGING !== undefined) {
     logger.add(new transports.Console({}));
 }

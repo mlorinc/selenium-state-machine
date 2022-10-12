@@ -31,9 +31,9 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      */
     private i: number;
     /**
-     * Last state index
+     * Number of iterations on state
      */
-    private lastI: number;
+    private stateCounter: number;
     /**
      * Map state name => state index
      */
@@ -66,7 +66,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
     constructor(context: TContext, private dependencies: TDependencyMap) {
         this.context = context;
         this.i = 0;
-        this.lastI = -1;
+        this.stateCounter = 0;
         this.nameMap = new Map();
         this.promise = undefined;
         this.reachedStates = new Set();
@@ -187,7 +187,6 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @returns void
      */
     private changeIndex(i: number): void {
-        this.lastI = this.i;
         if (this.i === i) {
             return;
         }
@@ -197,9 +196,11 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
         }
 
         const newStateName = i < this.states.length ? this.states[i].name : 'end';
+        logger.info(`executed function in state ${this.currentState} x${this.stateCounter + 1} times and spent ${this.timeOnState}ms`);
         logger.info(`transition from ${this.states[this.i].name} to ${newStateName}`);
         this.i = i;
         this.timeOnState = 0;
+        this.stateCounter = 0;
         this.reachedStates.add(newStateName);
         this.notify();
     }
@@ -245,6 +246,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
         process.on('uncaughtException', () => this.running = false);
 
         while (this.running && this.context.timeout > 0) {
+            const startingIndex = this.i;
             if (this.i >= this.states.length) {
                 logger.info('state machine has reached the end state');
                 return;
@@ -258,9 +260,6 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
 
             const started = Date.now();
             try {
-                if (this.lastI !== this.i) {
-                    logger.info(`executing function in state ${state.name}`);
-                }
                 const provide = await state.execute(this.dependencies);
 
                 for (const key of Object.keys(provide.updateMap)) {
@@ -292,7 +291,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
             }
             catch (e) {
                 if (e instanceof StaleDependencyReferenceError) {
-                    logger.info(`stale WebElement located in ${this.states[this.i].name}`,
+                    logger.info(`stale WebElement located in ${this.currentState}`,
                         {
                             element: e.dependency.value
                         });
@@ -300,7 +299,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                         this.changeIndex(e.dependency.provider.index);
                     }
                     else {
-                        logger.error('cannot recover WebElement from stale state');
+                        logger.error(`cannot recover WebElement from stale state in state ${this.currentState}`);
                         throw e;
                     }
                 }
@@ -309,11 +308,11 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                 }
                 else if (e instanceof error.StaleElementReferenceError) {
                     // warn user it might be error
-                    logger.warn(`unprotected WebElement is located in ${this.states[this.i].name}`);
+                    logger.warn(`unprotected WebElement is located in ${this.currentState}`);
                     continue;
                 }
                 else {
-                    logger.error('non fixable unknown error',
+                    logger.error(`non fixable unknown error in ${this.currentState}`,
                         {
                             error
                         });
@@ -322,11 +321,16 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
             }
             finally {
                 const delta = Date.now() - started;
-                this.timeOnState += delta;
                 this.context.timeout -= delta;
+
+                if (startingIndex === this.i) {
+                    this.timeOnState += delta;
+                    this.stateCounter += 1;
+                }
             }
         }
 
+        logger.info(`executed function in state ${this.currentState} x${this.stateCounter} times and spent ${this.timeOnState}ms`);
         if (this.i !== this.states.length) {
             throw new TimeoutError();
         }
