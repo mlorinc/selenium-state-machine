@@ -328,8 +328,15 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
         }
 
         logger.info(`executed function in state ${this.currentState} x${this.stateCounter} times and spent ${this.timeOnState}ms`);
+
+        if (!this.running && this.context.timeout > 0) {
+            logger.info(`stopped the state machine on state ${this.currentState}`);
+            return;
+        }
+
         if (this.i !== this.states.length) {
-            throw new TimeoutError();
+            logger.error(`timed out the state machine on state ${this.currentState}`);
+            throw new TimeoutError(`timed out the state machine on state ${this.currentState}`);
         }
     }
 }
