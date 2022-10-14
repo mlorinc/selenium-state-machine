@@ -1,8 +1,72 @@
-import { WebElement } from 'selenium-webdriver';
+import { error, WebElement } from 'selenium-webdriver';
 import { StateData } from './State';
 import { CriticalError } from './Error';
 import { WebElementDependency } from './WebElementDependency';
 import { DependencyMap, StaleDependencyReferenceError } from './Dependency';
+
+/**
+ * Check if element is stale
+ * @param element WebElement or WebElementDependency 
+ * @returns true if stale
+ */
+export async function isStale(element: WebElement | WebElementDependency<WebElement>): Promise<boolean> {
+    try {
+        const el = element instanceof WebElement ? element : element.debugElement;
+        if (el === undefined) {
+            return true;
+        }
+        await el.isDisplayed();
+        return false;
+    }
+    catch (e) {
+        if (e instanceof error.StaleElementReferenceError) {
+            return true;
+        }
+        throw e;
+    }
+}
+
+/**
+ * Check if element is displayed or part of DOM
+ * @param element WebElement or WebElementDependency 
+ * @returns true if the element is present
+ */
+export async function isAvailable(element: WebElement | WebElementDependency<WebElement>): Promise<boolean> {
+    try {
+        const el = element instanceof WebElement ? element : element.debugElement;
+        if (el === undefined) {
+            return false;
+        }
+        return await el.isDisplayed();
+    }
+    catch (e) {
+        if (e instanceof error.StaleElementReferenceError) {
+            return false;
+        }
+        throw e;
+    }
+}
+
+/**
+ * Check if element is interactive
+ * @param element WebElement or WebElementDependency 
+ * @returns true if element is displayed and enabled
+ */
+export async function isInteractive(element: WebElement | WebElementDependency<WebElement>): Promise<boolean> {
+    try {
+        const el = element instanceof WebElement ? element : element.debugElement;
+        if (el === undefined) {
+            return false;
+        }
+        return await el.isDisplayed() && await el.isEnabled();
+    }
+    catch (e) {
+        if (e instanceof error.StaleElementReferenceError) {
+            return false;
+        }
+        throw e;
+    }
+}
 
 /**
  * Wait state for interactivity
