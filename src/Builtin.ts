@@ -10,7 +10,7 @@ import { DependencyMap, StaleDependencyReferenceError } from './Dependency';
  * @param timeout timeout in ms
  * @returns StateData
  */
-export function waitInteractive<TDependencyMap extends DependencyMap>(dependency: string, timeout?: number): StateData<TDependencyMap> {
+export function waitInteractive<TDependencyMap extends DependencyMap>(dependency: string, timeout?: number): StateData<never, TDependencyMap> {
     return {
         f: async (provide, dependencies) => {
             const dep = dependencies[dependency];
@@ -39,7 +39,7 @@ export function waitInteractive<TDependencyMap extends DependencyMap>(dependency
  * @param timeout timeout in ms
  * @returns StateData
  */
-export function waitStale<TDependencyMap extends DependencyMap>(dependency: string, timeout?: number): StateData<TDependencyMap> {
+export function waitStale<TDependencyMap extends DependencyMap>(dependency: string, timeout?: number): StateData<never, TDependencyMap> {
     return {
         f: async (provide, dependencies) => {
             const dep = dependencies[dependency];
@@ -72,7 +72,7 @@ export function waitStale<TDependencyMap extends DependencyMap>(dependency: stri
  * @param timeout timeout in ms
  * @returns StateData
  */
-export function waitDisappear<TDependencyMap extends DependencyMap>(dependency: string, timeout?: number): StateData<TDependencyMap> {
+export function waitDisappear<TDependencyMap extends DependencyMap>(dependency: string, timeout?: number): StateData<never, TDependencyMap> {
     return {
         f: async (provide, dependencies) => {
             const dep = dependencies[dependency];

@@ -1,6 +1,14 @@
 import { DependencyMap } from './Dependency';
 import { CriticalError } from './Error';
 import { Provide, ProvideComplete, ProvidePublic } from './Provide';
+import { BaseContext } from './StateMachine';
+import { Timer } from './Timer';
+
+export interface StateProvideData<TContext extends BaseContext> {
+    context: TContext,
+    timers: {[name: string]: Timer},
+    timeout: number
+}
 
 /**
  * Definition of state arguments.
@@ -12,14 +20,14 @@ import { Provide, ProvideComplete, ProvidePublic } from './Provide';
  * @param timeout timeout on the state
  * @returns self
  */
-export interface StateData<TDependencyMap extends DependencyMap> {
-    f: (provide: ProvidePublic, dependencies: TDependencyMap) => Promise<ProvideComplete> | ProvideComplete;
+export interface StateData<TContext extends BaseContext, TDependencyMap extends DependencyMap> {
+    f: (provide: ProvidePublic<TContext, TDependencyMap>, dependencies: TDependencyMap) => Promise<ProvideComplete<TContext, TDependencyMap>> | ProvideComplete<TContext, TDependencyMap>;
     name?: string;
     timeout?: number;
 }
 
-export class State<TDependencyMap extends DependencyMap> {
-    constructor(private config: StateData<TDependencyMap>, public readonly index: number) {
+export class State<TContext extends BaseContext, TDependencyMap extends DependencyMap> {
+    constructor(private config: StateData<TContext, TDependencyMap>, public readonly index: number, private readonly provideConfig: StateProvideData<TContext>) {
     }
     
     /**
@@ -41,15 +49,18 @@ export class State<TDependencyMap extends DependencyMap> {
      * @param dependencies provided dependencies so far
      * @returns provide object
      */
-    async execute(dependencies: TDependencyMap): Promise<Provide> {
-        const provide = new Provide(this);
-        const result = await this.config.f(provide, dependencies) as Provide;
+    async execute(dependencies: TDependencyMap): Promise<Provide<TContext, TDependencyMap>> {
+        const provide = new Provide({
+            provider: this,
+            ...this.provideConfig
+        });
+        const result = await this.config.f(provide, dependencies) as Provide<TContext, TDependencyMap>;
 
         if (result === undefined) {
             throw new CriticalError(`undefined was returned in "${this.config.f?.constructor.name}".`);
         }
 
-        return result as Provide;
+        return result as Provide<TContext, TDependencyMap>;
     }
 }
 

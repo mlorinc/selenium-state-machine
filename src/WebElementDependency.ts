@@ -17,7 +17,7 @@ export class WebElementDependency<T extends WebElement> extends ValueDependency<
         this._value = (this._value) ? (createWebElementProxy(this._value, this)) : (undefined); 
     }
 
-    public set(v: T, provider: State<never>): WebElementDependency<T> {
+    public set(v: T, provider: State<never, never>): WebElementDependency<T> {
         return this.clone({value: createWebElementProxy(v, this), provider});
     }
 

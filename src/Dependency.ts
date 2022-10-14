@@ -21,7 +21,7 @@ export interface FsmDependencyArguments<T> {
 
 export interface FsmDependencyCloneArguments<T> {
     name?: string;
-    provider: State<never>
+    provider: State<never, never>
     value?: T;
 }
 
@@ -59,7 +59,7 @@ export interface Dependency<T> {
 export class ValueDependency<T> implements Dependency<T> {
     protected _value?: T;
     protected _name?: string;
-    protected _provider?: State<never>;
+    protected _provider?: State<never, never>;
     
     constructor(config?: FsmDependencyArguments<T>) {
         this._value = config?.value;
@@ -75,7 +75,7 @@ export class ValueDependency<T> implements Dependency<T> {
     /**
      * Get who provides the dependency.
      */
-    public get provider() : State<never> {
+    public get provider() : State<never, never> {
         if (this._provider === undefined) {
             throw new CriticalError(`provider of "${this.name}" is undefined.`);
         }
@@ -86,7 +86,7 @@ export class ValueDependency<T> implements Dependency<T> {
     /**
      * Set new dependency provider. Must be first in invalid state before assigning.
      */
-    public set provider(v: State<never>) {
+    public set provider(v: State<never, never>) {
         if (this._provider !== undefined) {
             throw new CriticalError(`provider cannot be set more than once, "${this.name}" has conflicting providers.`);
         }
@@ -131,7 +131,7 @@ export class ValueDependency<T> implements Dependency<T> {
      * @param provider new provider
      * @returns new Dependency with new values
      */
-    public set(value : T, provider: State<never>): ValueDependency<T> {
+    public set(value : T, provider: State<never, never>): ValueDependency<T> {
         return this.clone({value, provider});
     }
 

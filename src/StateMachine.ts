@@ -61,7 +61,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
     /**
      * List of all states
      */
-    private _states: State<TDependencyMap>[];
+    private _states: State<TContext, TDependencyMap>[];
     /**
      * Spent time on current state
      */
@@ -139,7 +139,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param name new name of the timer
      * @param timeout time after timer will be in state 'elapsed'
      */
-    public createTimer(name: string | ProvideFunction<TDependencyMap>, timeout: number): void {
+    public createTimer(name: string | ProvideFunction<never, never>, timeout: number): void {
         const stringName = typeof name === 'string' ? name : name.name;
         this._context.timers[stringName] = new Timer(this._context.timeout, timeout);
     }
@@ -148,7 +148,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * Clear set timer with name.
      * @param name name of the timer
      */
-    public clearTimer(name: string | ProvideFunction<TDependencyMap>): void {
+    public clearTimer(name: string | ProvideFunction<never, never>): void {
         const stringName = typeof name === 'string' ? name : name.name;
         delete this._context.timers[stringName];
     }
@@ -158,7 +158,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param name name of the timer in question
      * @returns boolean signalling availability
      */
-    public hasTimer(name: string | ProvideFunction<TDependencyMap>): boolean {
+    public hasTimer(name: string | ProvideFunction<never, never>): boolean {
         const stringName = typeof name === 'string' ? name : name.name;
         return this._context.timers[stringName] !== undefined;
     }
@@ -168,7 +168,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param name name of the timer in question
      * @returns boolean signaling its state
      */
-    public hasElapsedTimer(name: string | ProvideFunction<TDependencyMap>): boolean {
+    public hasElapsedTimer(name: string | ProvideFunction<never, never>): boolean {
         const stringName = typeof name === 'string' ? name : name.name;
         const timer = this._context.timers[stringName];
 
@@ -184,7 +184,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param state state to be added
      * @returns self
      */
-    private addState(state: State<TDependencyMap>): this {
+    private addState(state: State<TContext, TDependencyMap>): this {
         this._states.push(state);
         this._nameMap.set(state.name, this._states.length - 1);
         return this;
@@ -211,7 +211,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param name name of state or function which is called
      * @param timeout timeout in ms
      */
-    public async waitUntilReached(name: string | ProvideFunction<TDependencyMap>, timeout?: number): Promise<void> {
+    public async waitUntilReached(name: string | ProvideFunction<TContext, TDependencyMap>, timeout?: number): Promise<void> {
         const stringName = typeof name === 'string' ? name : name.name;
         timeout = timeout !== undefined ? timeout : Number.POSITIVE_INFINITY;
 
@@ -230,9 +230,13 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param timeout 
      * @returns self
      */
-    public state(f: ((provide: ProvidePublic, dependencies: TDependencyMap) => Promise<ProvideComplete> | ProvideComplete
+    public state(f: ((provide: ProvidePublic<TContext, TDependencyMap>, dependencies: TDependencyMap) => Promise<ProvideComplete<TContext, TDependencyMap>> | ProvideComplete<TContext, TDependencyMap>
     ), timeout?: number): this {
-        const state = new State<TDependencyMap>({ f, timeout }, this._states.length);
+        const state = new State<TContext, TDependencyMap>({ f, timeout }, this._states.length, {
+            context: this.context,
+            timeout: this.timeout,
+            timers: this._context.timers
+        });
         return this.addState(state);
     }
 
@@ -246,9 +250,13 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @param timeout timeout on the state
      * @returns self
      */
-    public namedState(name: string, f: ((provide: ProvidePublic, dependencies: TDependencyMap) => Promise<ProvideComplete> | ProvideComplete
+    public namedState(name: string, f: ((provide: ProvidePublic<TContext, TDependencyMap>, dependencies: TDependencyMap) => Promise<ProvideComplete<TContext, TDependencyMap>> | ProvideComplete<TContext, TDependencyMap>
     ), timeout?: number): this {
-        const state = new State<TDependencyMap>({ f, name, timeout }, this._states.length);
+        const state = new State<TContext, TDependencyMap>({ f, name, timeout }, this._states.length, {
+            context: this.context,
+            timeout: this.timeout,
+            timers: this._context.timers
+        });
         return this.addState(state);
     }
 
@@ -334,11 +342,22 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                 const delta = Date.now() - started;
                 this._timeOnState += delta;
                 this._stateCounter += 1;
+                this._context.timeout -= delta;
 
                 for (const key of Object.keys(provide.updateMap)) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (this.dependencies as any)[key] = provide.updateMap[key];
                 }
+
+                for (const timer of provide.staleTimers) {
+                    this.clearTimer(timer);
+                }
+
+                for (const timer of provide.newTimers) {
+                    this.createTimer(timer.name, timer.timeout);
+                }
+
+                this.updateContext(provide.context);
 
                 if (provide.doesRepeat()) {
                     continue;
@@ -384,12 +403,11 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                     }
                 }
                 else if (e instanceof error.NoSuchElementError || e instanceof error.ElementClickInterceptedError) {
-                    continue;
+                    // continue
                 }
                 else if (e instanceof error.StaleElementReferenceError) {
                     // warn user it might be error
                     logger.warn(`unprotected WebElement is located in ${this.currentState}`);
-                    continue;
                 }
                 else {
                     logger.error(`non fixable unknown error in ${this.currentState}`,
@@ -398,8 +416,6 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                         });
                     throw e;
                 }
-            }
-            finally {
                 const delta = Date.now() - started;
                 this._context.timeout -= delta;
             }
