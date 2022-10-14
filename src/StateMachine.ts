@@ -145,6 +145,25 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
     }
 
     /**
+     * Clear set timer with name.
+     * @param name name of the timer
+     */
+    public clearTimer(name: string | ProvideFunction<TDependencyMap>): void {
+        const stringName = typeof name === 'string' ? name : name.name;
+        delete this._context.timers[stringName];
+    }
+
+    /**
+     * Check if timer is set.
+     * @param name name of the timer in question
+     * @returns boolean signalling availability
+     */
+    public hasTimer(name: string | ProvideFunction<TDependencyMap>): boolean {
+        const stringName = typeof name === 'string' ? name : name.name;
+        return this._context.timers[stringName] !== undefined;
+    }
+
+    /**
      * Check if timer has elapsed.
      * @param name name of the timer in question
      * @returns boolean signaling its state
