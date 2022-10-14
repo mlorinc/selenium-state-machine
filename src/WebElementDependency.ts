@@ -8,10 +8,13 @@ import { CriticalError } from './Error';
  * handling stale state.
  */
 export class WebElementDependency<T extends WebElement> extends ValueDependency<T> {
+    private _debugElementInfo: WebElement | undefined;
+
     constructor(config?: FsmDependencyArguments<T>) {
         super(config);
         this.invalidate = this.invalidate.bind(this);
-        this._value = (this._value) ? (createWebElementProxy(this._value, this)) : (undefined);
+        this._debugElementInfo = this._value;
+        this._value = (this._value) ? (createWebElementProxy(this._value, this)) : (undefined); 
     }
 
     public set(v: T, provider: State<never>): WebElementDependency<T> {
@@ -26,6 +29,11 @@ export class WebElementDependency<T extends WebElement> extends ValueDependency<
         return this._value;
     }
 
+    
+    public get debugElement() : WebElement | undefined {
+        return this._debugElementInfo;
+    }
+    
     protected clone(newValues: FsmDependencyCloneArguments<T>): WebElementDependency<T> {
         const dep = new WebElementDependency<T>({
             name: newValues?.name ?? this._name,
