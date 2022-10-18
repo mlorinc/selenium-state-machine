@@ -75,18 +75,14 @@ export class ValueDependency<T> implements Dependency<T> {
     /**
      * Get who provides the dependency.
      */
-    public get provider() : State<never, never> {
-        if (this._provider === undefined) {
-            throw new CriticalError(`provider of "${this.name}" is undefined.`);
-        }
-
+    public get provider() : State<never, never> | undefined {
         return this._provider;
     }
 
     /**
      * Set new dependency provider. Must be first in invalid state before assigning.
      */
-    public set provider(v: State<never, never>) {
+    public set provider(v: State<never, never> | undefined) {
         if (this._provider !== undefined) {
             throw new CriticalError(`provider cannot be set more than once, "${this.name}" has conflicting providers.`);
         }
