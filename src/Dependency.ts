@@ -94,7 +94,7 @@ export class ValueDependency<T> implements Dependency<T> {
      * Check if dependency is in ok state.
      */
     public get ready() : boolean {
-        return this.value !== undefined;
+        return this._value !== undefined;
     }
 
     public get name() : string {
