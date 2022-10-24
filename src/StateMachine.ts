@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { error } from 'selenium-webdriver';
 import { DependencyMap, StaleDependencyReferenceError } from './Dependency';
 import { CriticalError, TimeoutError } from './Error';
@@ -16,9 +17,14 @@ export interface BaseContext {
      * Remaining time for fsm
      */
     timeout: number
+    /**
+     * The machine name
+     */
+    name?: string;
 }
 
 interface InternalContext<T extends BaseContext> {
+    logger: winston.Logger,
     userContext: T,
     timeout: number,
     timers: { [name: string]: Timer }
@@ -72,7 +78,12 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
     private _transitionCallbacks: ((machine: StateMachine<TContext, TDependencyMap>, logger: winston.Logger) => void | PromiseLike<void>)[];
 
     constructor(context: TContext, private dependencies: TDependencyMap) {
-        this._context = { userContext: context, timeout: context.timeout, timers: {} };
+        this._context = {
+            logger: logger(`${context.name ?? crypto.randomBytes(16).toString('hex')}-${new Date().toISOString()}`),
+            userContext: context,
+            timeout: context.timeout,
+            timers: {} 
+        };
         this._i = 0;
         this._stateCounter = 0;
         this._nameMap = new Map();
@@ -195,7 +206,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
      * @returns 
      */
     private notify(): Promise<void[]> {
-        return Promise.all(this._transitionCallbacks.map((x) => x(this, logger)));
+        return Promise.all(this._transitionCallbacks.map((x) => x(this, this._context.logger)));
     }
 
     /**
@@ -275,8 +286,8 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
         }
 
         const newStateName = i < this._states.length ? this._states[i].name : 'end';
-        logger.info(`executed function in state ${this.currentState} x${this._stateCounter} times and spent ${this._timeOnState}ms`);
-        logger.info(`transition from ${this._states[this._i].name} to ${newStateName}`);
+        this._context.logger.info(`executed function in state ${this.currentState} x${this._stateCounter} times and spent ${this._timeOnState}ms`);
+        this._context.logger.info(`transition from ${this._states[this._i].name} to ${newStateName}`);
         this._i = i;
         this._timeOnState = 0;
         this._stateCounter = 0;
@@ -326,7 +337,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
 
         while (this._running && this._context.timeout > 0) {
             if (this._i >= this._states.length) {
-                logger.info('state machine has reached the end state');
+                this._context.logger.info('state machine has reached the end state');
                 return;
             }
 
@@ -384,21 +395,21 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
             catch (e) {
                 if (e instanceof StaleDependencyReferenceError) {
                     if (e.dependency instanceof WebElementDependency) {
-                        logger.info(`stale WebElement with name ${e.dependency.name} located in ${this.currentState}`,
+                        this._context.logger.info(`stale WebElement with name ${e.dependency.name} located in ${this.currentState}`,
                             {
                                 name: e.dependency?.debugElement?.constructor.name ?? 'unknown',
                                 element: e.dependency.debugElement
                             });
                     }
                     else {
-                        logger.info(`stale dependency with name ${e.dependency.name} located in ${this.currentState}`);
+                        this._context.logger.info(`stale dependency with name ${e.dependency.name} located in ${this.currentState}`);
                     }
 
                     if (e.dependency.provider !== undefined) {
                         this.changeIndex(e.dependency.provider.index);
                     }
                     else {
-                        logger.error(`cannot recover WebElement from stale state in state ${this.currentState}`);
+                        this._context.logger.error(`cannot recover WebElement from stale state in state ${this.currentState}`);
                         throw e;
                     }
                 }
@@ -407,10 +418,10 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                 }
                 else if (e instanceof error.StaleElementReferenceError) {
                     // warn user it might be error
-                    logger.warn(`unprotected WebElement is located in ${this.currentState}`);
+                    this._context.logger.warn(`unprotected WebElement is located in ${this.currentState}`);
                 }
                 else {
-                    logger.error(`non fixable unknown error in ${this.currentState}`,
+                    this._context.logger.error(`non fixable unknown error in ${this.currentState}`,
                         {
                             error
                         });
@@ -421,15 +432,15 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
             }
         }
 
-        logger.info(`executed function in state ${this.currentState} x${this._stateCounter} times and spent ${this._timeOnState}ms`);
+        this._context.logger.info(`executed function in state ${this.currentState} x${this._stateCounter} times and spent ${this._timeOnState}ms`);
 
         if (!this._running && this._context.timeout > 0) {
-            logger.info(`stopped the state machine on state ${this.currentState}`);
+            this._context.logger.info(`stopped the state machine on state ${this.currentState}`);
             return;
         }
 
         if (this._i !== this._states.length) {
-            logger.error(`timed out the state machine on state ${this.currentState}`);
+            this._context.logger.error(`timed out the state machine on state ${this.currentState}`);
             throw new TimeoutError(`timed out the state machine on state ${this.currentState}`);
         }
     }
