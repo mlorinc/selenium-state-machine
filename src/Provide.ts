@@ -2,6 +2,7 @@ import { State, StateProvideData } from './State';
 import { DependencyMap, DependencyID, ValueDependency, Dependency } from './Dependency';
 import { CriticalError } from './Error';
 import { BaseContext } from './StateMachine';
+import winston = require('winston');
 
 export type ProvideFunction<TContext extends BaseContext, TDependencyMap extends DependencyMap> = (provide: ProvidePublic<TContext, TDependencyMap>, dependencies: TDependencyMap) => ProvideComplete<TContext, TDependencyMap> | Promise<ProvideComplete<TContext, TDependencyMap>>;
 
@@ -115,6 +116,7 @@ export interface TimerData {
 }
 
 export interface ProvideData<TContext extends BaseContext, TDependencyMap extends DependencyMap> extends StateProvideData<TContext> {
+    logger: winston.Logger,
     provider: State<TContext, TDependencyMap>,
 }
 
@@ -240,6 +242,7 @@ export class Provide<TContext extends BaseContext, TDependencyMap extends Depend
 
         const updatedDependency = dep.set(newValue, this.config.provider as unknown as State<never, never>);
         this._updateMap[updatedDependency.id] = updatedDependency;
+        this.config.logger.info(`new provider set for dependency "${dependency.name}" with name "${this.config.provider.name}"`);
         return this;
     }
 

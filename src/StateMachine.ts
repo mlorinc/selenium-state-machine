@@ -245,6 +245,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
     ), timeout?: number): this {
         const state = new State<TContext, TDependencyMap>({ f, timeout }, this._states.length, {
             context: this.context,
+            logger: this._context.logger,
             timeout: this.timeout,
             timers: this._context.timers
         });
@@ -265,6 +266,7 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
     ), timeout?: number): this {
         const state = new State<TContext, TDependencyMap>({ f, name, timeout }, this._states.length, {
             context: this.context,
+            logger: this._context.logger,
             timeout: this.timeout,
             timers: this._context.timers
         });
@@ -397,12 +399,15 @@ export class StateMachine<TContext extends BaseContext, TDependencyMap extends D
                     if (e.dependency instanceof WebElementDependency) {
                         this._context.logger.info(`stale WebElement with name ${e.dependency.name} located in ${this.currentState}`,
                             {
-                                name: e.dependency?.debugElement?.constructor.name ?? 'unknown',
-                                element: e.dependency.debugElement
+                                name: e.dependency.debugElement?.constructor.name ?? 'unknown WebElement',
+                                element: e.dependency.debugElement,
+                                provider: e.dependency.provider?.name ?? 'missing provider'
                             });
                     }
                     else {
-                        this._context.logger.info(`stale dependency with name ${e.dependency.name} located in ${this.currentState}`);
+                        this._context.logger.info(`stale dependency with name ${e.dependency.name} located in ${this.currentState}`, {
+                            provider: e.dependency.provider?.name ?? 'missing provider'
+                        });
                     }
 
                     if (e.dependency.provider !== undefined) {

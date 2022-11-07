@@ -83,7 +83,7 @@ export class ValueDependency<T> implements Dependency<T> {
      * Set new dependency provider. Must be first in invalid state before assigning.
      */
     public set provider(v: State<never, never> | undefined) {
-        if (this._provider !== undefined) {
+        if (this._provider !== undefined && this._provider.name !== v?.name) {
             throw new CriticalError(`provider cannot be set more than once, "${this.name}" has conflicting providers.`);
         }
 

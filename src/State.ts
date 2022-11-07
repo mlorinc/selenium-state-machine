@@ -1,3 +1,4 @@
+import winston = require('winston');
 import { DependencyMap } from './Dependency';
 import { CriticalError } from './Error';
 import { Provide, ProvideComplete, ProvidePublic } from './Provide';
@@ -6,6 +7,7 @@ import { Timer } from './Timer';
 
 export interface StateProvideData<TContext extends BaseContext> {
     context: TContext,
+    logger: winston.Logger,
     timers: {[name: string]: Timer},
     timeout: number
 }
